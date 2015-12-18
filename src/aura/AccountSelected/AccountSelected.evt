@@ -1,4 +1,0 @@
-<aura:event type="APPLICATION" description="An Account has been selected" >
-    <aura:attribute name="acctId" type="String"/>
-    <aura:attribute name="account" Type="Account"/>
-</aura:event>
