@@ -1,0 +1,138 @@
+<project name="AolPaidServices" default="local2qa" basedir="." xmlns:sf="antlib:com.salesforce" xmlns:if="ant:if" xmlns:unless="ant:unless">
+
+  <!-- <setproxy proxyhost="proxy-mmk-1.fmr.com" proxyport="8000"/> -->
+
+  <tstamp/>
+
+  <property file="../build.properties"/>
+
+  <!--================ default ===============================-->
+  <property name="release" value="${DSTAMP}-${TSTAMP}"/>
+  <property name="source" value="../"/>
+  <property name="manifest" value="${source}/manifest.csv"/>
+  <property name="checkOnly" value="true"/>
+  <property name="allowMissing" value="true"/>
+  <!--================ setup package =========================-->
+  <property environment="${env}"/>
+
+  <target name="getrev" depends="clean">
+    <mkdir dir="${tmpdir}"/>
+    <property name="diffrev" value="${target}"/>
+    <exec executable="git" dir="${source}" output="${tmpdir}/sha" outputproperty="sha" >
+      <arg value="rev-parse"/>
+      <arg value="${diffrev}"/>
+    </exec>
+  </target>
+
+  <target name="diff" depends="clean,getrev">
+  	<mkdir dir="${tmpdir}"/>
+  	<exec executable="git" dir="${source}" output="${tmpdir}/diff.txt" error="${tmpdir}/error.txt">
+  	  <arg line="diff --name-only ${sha}" />
+  	</exec>
+  </target>
+
+  <target name="createPackage" depends="clean,diff">
+    <copy todir="${tmpdir}">
+      <fileset dir="${source}">
+      	<include name="src/package.xml"/>
+      	<includesfile name="${tmpdir}/diff.txt"/>
+      </fileset>
+    </copy>
+  </target>
+
+  <target name="postDeploy">
+    <move todir="release/${target}/${release}" unless:true="${checkOnly}">
+      <fileset dir="${tmpdir}"/>
+    </move>
+  </target>
+
+  <target name="clean">
+    <property name="tmpdir" value="release/tmp" />
+    <property name="releasedir" value="release/${target}/${release}" />
+    <property name="packagexml" value="${tmpdir}/src/package.xml" />
+    <delete dir="${tmpdir}" quiet="true"/>
+  </target>
+
+  <!--================ deployment sanity check ===================-->
+  <target name="checkOnlyConfirm" unless="${checkOnly}">
+    <input message="Check only is false${line.separator}
+      All changes are going to be deployed!${line.separator}
+      Are you sure you want to continue (y/n)"
+      validargs="y,n"
+      addproperty="do.deploy"/>
+    <condition property="do.abort">
+      <equals arg1="n" arg2="${do.deploy}"/>
+    </condition>
+    <fail if="do.abort">Deploy Aborted by user.</fail>
+    <property name="diffrev" value="@{1}"/>
+  </target>
+
+  <!--================ primary execution targets ================-->
+  <target name="local2qa" depends="checkOnlyConfirm">
+    <property name="target" value="qa"/>
+    <antcall target="deploy">
+      <param name="username" value="${qa.username}"/>
+      <param name="password" value="${qa.password}"/>
+      <param name="serverurl" value="${qa.serverurl}"/>
+    </antcall>
+  </target>
+  <target name="local2uat"  depends="checkOnlyConfirm">
+    <property name="target" value="uat"/>
+    <antcall target="deploy">
+      <param name="username" value="${uat.username}"/>
+      <param name="password" value="${uat.password}"/>
+      <param name="serverurl" value="${uat.serverurl}"/>
+    </antcall>
+  </target>
+  <target name="local2int" depends="checkOnlyConfirm">
+    <property name="target" value="int"/>
+    <antcall target="deploy">
+      <param name="username" value="${int.username}"/>
+      <param name="password" value="${int.password}"/>
+      <param name="serverurl" value="${int.serverurl}"/>
+    </antcall>
+  </target>
+
+  <!--================ deploy targets ==========================-->
+
+  <target name="deploy" depends="backup,createPackage">
+    <echo level="verbose">
+      Deploying to ${target}
+      username: ${username}
+      serverurl: ${serverurl}
+    </echo>
+    <echo>
+      Check Only = ${checkOnly}
+    </echo>
+    <sf:deploy
+     username="${username}"
+     password="${password}"
+     serverurl="${serverurl}"
+     pollWaitMillis="20000"
+     maxPoll="5000"
+     checkOnly="${checkOnly}"
+     runAllTests="${runAllTests}"
+     allowMissingFiles="${allowMissing}"
+     deployRoot="${tmpdir}/src"/>
+     <antcall target="postDeploy"/>
+  </target>
+  <target name="backup" depends="createPackage">
+    <echo level="verbose">
+      Backing up ${target}
+      username: ${username}
+      serverurl: ${serverurl}
+      noBackup : ${noBackup}
+    </echo>
+    <mkdir dir="${tmpdir}/backup" unless:true="${checkOnly}" />
+    <sf:retrieve
+     username="${username}"
+     password="${password}"
+     serverurl="${serverurl}"
+     pollWaitMillis="10000"
+     maxPoll="5000"
+     unpackaged="${packagexml}"
+     retrieveTarget="${tmpdir}/backup"
+     unless:true="${checkOnly}"/>
+   </target>
+
+ </project>

@@ -1,0 +1,243 @@
+<project name="AntClassProject" basedir="." xmlns:sf="antlib:com.salesforce">
+
+    <property file="build.properties" />
+    <property name="sourceDev" value='source/dev' />
+    <property name="sourceQA" value='source/qa' />
+    <property name="sourceFull" value='source/full' />
+    <tstamp><format property="TSTAMP" pattern="kkmmss" /></tstamp>
+    <property name="logName" value="log/${DSTAMP}${TSTAMP}.txt" />
+    <property name="QABackup" value="archive/QA-${DSTAMP}${TSTAMP}" />
+    <property name="UatPartialBackup" value="archive/uatpartial-${DSTAMP}${TSTAMP}" />
+    <property name="FullBackup" value="archive/Full-${DSTAMP}${TSTAMP}" />
+    <property name="ProdBackup" value="archive/Prod-${DSTAMP}${TSTAMP}" />
+
+    <target name="retrieveDev">
+      <mkdir dir="log" />
+      <record name="${logName}" action="start"/>
+      <echo>Retrieving from AolDev...</echo>
+      <delete dir="${sourceDev}" />
+      <mkdir dir="${sourceDev}" />
+      <sf:retrieve username="${aoldev.username}"
+                   password="${aoldev.password}"
+                   serverurl="${aoldev.serverurl}"
+                   retrieveTarget="${sourceDev}"
+                   unpackaged="retrieve/package.xml"
+                   pollWaitMillis="10000"
+                   maxPoll="5000" />
+       <record name="${logName}" action="stop"/>
+    </target>
+
+    <target name="validateQA">
+      <mkdir dir="log" />
+      <record name="${logName}" action="start"/>
+      <echo>Validating AolQA...</echo>
+      <sf:deploy username="${aolqa.username}"
+                 password="${aolqa.password}"
+                 serverurl="${aolqa.serverurl}"
+                 deployRoot="${sourceDev}"
+                 pollWaitMillis="10000"
+                 maxPoll="5000"
+                 runAllTests="true"
+                 checkOnly="true" />
+       <record name="${logName}" action="stop"/>
+    </target>
+
+    <target name="deployQA">
+      <mkdir dir="log" />
+      <record name="${logName}" action="start"/>
+      <echo>Archiving AolQA...</echo>
+      <mkdir dir="${QABackup}" />
+      <sf:retrieve username="${aolqa.username}"
+                   password="${aolqa.password}"
+                   serverurl="${aolqa.serverurl}"
+                   retrieveTarget="${QABackup}"
+                   unpackaged="retrieve/package.xml"
+                   pollWaitMillis="10000"
+                   maxPoll="5000" />
+
+      <echo>Deploying to AolQA...</echo>
+      <sf:deploy username="${aolqa.username}"
+                 password="${aolqa.password}"
+                 serverurl="${aolqa.serverurl}"
+                 deployRoot="${sourceDev}"
+                 pollWaitMillis="10000"
+                 maxPoll="5000"
+                 testLevel="RunLocalTests"
+                 checkOnly="false" />
+       <record name="${logName}" action="stop"/>
+    </target>
+
+    <target name="retrieveQA">
+      <mkdir dir="log" />
+      <record name="${logName}" action="start"/>
+      <echo>Retrieving from AolQA...</echo>
+      <delete dir="${sourceQA}" />
+      <mkdir dir="${sourceQA}" />
+      <sf:retrieve username="${aolqa.username}"
+                   password="${aolqa.password}"
+                   serverurl="${aolqa.serverurl}"
+                   retrieveTarget="${sourceQA}"
+                   unpackaged="retrieve/package.xml"
+                   pollWaitMillis="10000"
+                   maxPoll="5000" />
+       <record name="${logName}" action="stop"/>
+    </target>
+
+    <target name="validateUatPartial">
+      <mkdir dir="log" />
+      <record name="${logName}" action="start"/>
+      <echo>Validating UatPartial...</echo>
+      <sf:deploy username="${uatpartial.username}"
+                 password="${uatpartial.password}"
+                 serverurl="${uatpartial.serverurl}"
+                 deployRoot="${sourceQA}"
+                 pollWaitMillis="10000"
+                 maxPoll="5000"
+                 runAllTests="true"
+                 checkOnly="true" />
+       <record name="${logName}" action="stop"/>
+    </target>
+
+    <target name="deployUatPartial">
+      <mkdir dir="log" />
+      <record name="${logName}" action="start"/>
+      <echo>Archiving UatPartial...</echo>
+      <mkdir dir="${UatPartialBackup}" />
+      <sf:retrieve username="${uatpartial.username}"
+                   password="${uatpartial.password}"
+                   serverurl="${uatpartial.serverurl}"
+                   retrieveTarget="${UatPartialBackup}"
+                   unpackaged="retrieve/package.xml"
+                   pollWaitMillis="10000"
+                   maxPoll="5000" />
+
+      <echo>Deploying to UatPartial...</echo>
+      <sf:deploy username="${uatpartial.username}"
+                 password="${uatpartial.password}"
+                 serverurl="${uatpartial.serverurl}"
+                 deployRoot="${sourceQA}"
+                 pollWaitMillis="10000"
+                 maxPoll="5000"
+                 testLevel="RunLocalTests"
+                 checkOnly="false" />
+       <record name="${logName}" action="stop"/>
+    </target>
+
+    <target name="validateFull">
+      <mkdir dir="log" />
+      <record name="${logName}" action="start"/>
+      <echo>Validating AolFull...</echo>
+      <sf:deploy username="${aolfull.username}"
+                 password="${aolfull.password}"
+                 serverurl="${aolfull.serverurl}"
+                 deployRoot="${sourceQA}"
+                 pollWaitMillis="10000"
+                 maxPoll="5000"
+                 runAllTests="true"
+                 checkOnly="true" />
+       <record name="${logName}" action="stop"/>
+    </target>
+
+    <target name="deployFull">
+      <mkdir dir="log" />
+      <record name="${logName}" action="start"/>
+      <echo>Archiving AolFull...</echo>
+      <mkdir dir="${FullBackup}" />
+      <sf:retrieve username="${aolfull.username}"
+                   password="${aolfull.password}"
+                   serverurl="${aolfull.serverurl}"
+                   retrieveTarget="${FullBackup}"
+                   unpackaged="retrieve/package.xml"
+                   pollWaitMillis="10000"
+                   maxPoll="5000" />
+
+      <echo>Deploying to AolFull...</echo>
+      <sf:deploy username="${aolfull.username}"
+                 password="${aolfull.password}"
+                 serverurl="${aolfull.serverurl}"
+                 deployRoot="${sourceQA}"
+                 pollWaitMillis="10000"
+                 maxPoll="5000"
+                 testLevel="RunLocalTests"
+                 checkOnly="false" />
+       <record name="${logName}" action="stop"/>
+    </target>
+
+    <target name="retrieveFull">
+      <mkdir dir="log" />
+      <record name="${logName}" action="start"/>
+      <echo>Retrieving from AolFull...</echo>
+      <delete dir="${sourceFull}" />
+      <mkdir dir="${sourceFull}" />
+      <sf:retrieve username="${aolfull.username}"
+                   password="${aolfull.password}"
+                   serverurl="${aolfull.serverurl}"
+                   retrieveTarget="${sourceFull}"
+                   unpackaged="retrieve/package.xml"
+                   pollWaitMillis="10000"
+                   maxPoll="5000" />
+       <record name="${logName}" action="stop"/>
+    </target>
+
+    <target name="validateProd">
+      <mkdir dir="log" />
+      <record name="${logName}" action="start"/>
+      <echo>Validating AolProd...</echo>
+      <sf:deploy username="${aolprod.username}"
+                 password="${aolprod.password}"
+                 serverurl="${aolprod.serverurl}"
+                 deployRoot="${sourceFull}"
+                 pollWaitMillis="10000"
+                 maxPoll="5000"
+                 testLevel="RunLocalTests"
+                 checkOnly="true" />
+       <record name="${logName}" action="stop"/>
+    </target>
+
+    <target name="deployProd">
+      <mkdir dir="log" />
+      <record name="${logName}" action="start"/>
+      <echo>Archiving AolProd...</echo>
+      <mkdir dir="${ProdBackup}" />
+      <sf:retrieve username="${aolprod.username}"
+                   password="${aolprod.password}"
+                   serverurl="${aolprod.serverurl}"
+                   retrieveTarget="${ProdBackup}"
+                   unpackaged="retrieve/package.xml"
+                   pollWaitMillis="10000"
+                   maxPoll="5000" />
+
+      <echo>Deploying to AolProd...</echo>
+      <sf:deploy username="${aolprod.username}"
+                 password="${aolprod.password}"
+                 serverurl="${aolprod.serverurl}"
+                 deployRoot="${sourceFull}"
+                 pollWaitMillis="10000"
+                 maxPoll="5000"
+                 testLevel="RunLocalTests"
+                 checkOnly="false" />
+       <record name="${logName}" action="stop"/>
+    </target>
+
+    <!-- <target name="destroyQA">
+      <mkdir dir="log" />
+      <record name="${logName}" action="start"/>
+      <echo>Archiving QA...</echo>
+      <mkdir dir="${QABackup}" />
+      <sf:retrieve username="${aolqa.username}"
+                   password="${aolqa.password}"
+                   serverurl="${aolqa.serverurl}"
+                   retrieveTarget="${QABackup}"
+                   unpackaged="destroy/destructiveChanges.xml"
+                   pollWaitMillis="10000"
+                   maxPoll="5000" />
+      <echo>Deleting items in QA...</echo>
+      <sf:deploy username="${aolqa.username}"
+                 password="${aolqa.password}"
+                 serverurl="${aolqa.serverurl}"
+                 deployRoot="destroy"
+                 pollWaitMillis="10000"
+                 maxPoll="5000" />
+       <record name="${logName}" action="stop"/>
+    </target> -->
+</project>

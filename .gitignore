@@ -1,0 +1,17 @@
+.DS_Store
+*.sublime-project
+*.sublime-settings
+*.sublime-workspace
+apex-scripts/
+build/
+config/
+debug/
+deploy/
+node_modules/
+reports/
+mm.log
+ant/retrieve/package.xml
+ant/archive/*
+ant/log/*
+ant/source/*
+ant/lib

@@ -1,0 +1,10 @@
+[
+	["*","AAA","111"],
+	["subfolder/*","BBB","222"],
+	["subfolder", "CCC", "333"],
+	["/", "DDD", "444"],
+  ["/*", "44", "EE"],
+  ["profile/*", "<userPermissions>[^<]*<enabled>(true|false)</enabled>[^<]*<name>LightningExperienceUser</name>[^<]*</userPermissions>",
+    "<!-- LightningExperienceUser permission removed -->"],
+	["subfolder/sub2/*","AWESOME","AMAZING"]
+]

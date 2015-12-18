@@ -1,0 +1,281 @@
+<project name="AntClassProject" basedir="." xmlns:sf="antlib:com.salesforce">
+    <!-- this taskdef helps locate the ant-salesforce jar in the project -->
+    <taskdef
+      resource="com/salesforce/antlib.xml"
+      classPath="lib/ant-salesforce_34.jar"
+      uri="antlib:com.salesforce"/>
+
+    <property file="build.properties" />
+
+    <tstamp>
+      <format property="date" pattern="yyyy-MM-dd" />
+      <format property="dateTime" pattern="yyyy-MM-dd_kk-mm-ss" />
+    </tstamp>
+    <property name="packageXML" value="${basedir}/retrieve/package.xml" />
+    <property name="projectSource" value='../src' />
+    <property name="entireProject" value="${projectSource}/package.xml" />
+    <property name="todaysDeletions" value="${basedir}/destroy/${date}" />
+    <property name="sourceDev" value='${basedir}/source/dev' />
+    <property name="sourceQA" value='${basedir}/source/qa' />
+    <property name="sourceFull" value='${basedir}/source/full' />
+    <property name="sourceTraining" value='${basedir}/source/training' />
+    <property name="logFile" value="${basedir}/log/${dateTime}.txt" />
+    <property name="QABackup" value="${basedir}/archive/QA-${dateTime}" />
+    <property name="FullBackup" value="${basedir}/archive/Full-${dateTime}" />
+    <property name="TrainingBackup" value="${basedir}/archive/Training-${dateTime}" />
+    <property name="ProdBackup" value="${basedir}/archive/Prod-${dateTime}" />
+
+    <target name="checkForTodaysDeletions">
+      <available file="${todaysDeletions}" property="todaysDeletionsExist"/>
+    </target>
+
+    <target name="retrieveDev">
+      <mkdir dir="log" />
+      <record name="${logFile}" action="start"/>
+      <echo>Retrieving from AolDev...</echo>
+      <delete dir="${sourceDev}" />
+      <mkdir dir="${sourceDev}" />
+      <sf:retrieve username="${aoldev.username}"
+                   password="${aoldev.password}"
+                   serverurl="${aoldev.serverurl}"
+                   retrieveTarget="${sourceDev}"
+                   unpackaged="${entireProject}"
+                   pollWaitMillis="10000"
+                   maxPoll="5000" />
+       <record name="${logFile}" action="stop"/>
+    </target>
+
+    <target name="retrieveQA">
+      <mkdir dir="log" />
+      <record name="${logFile}" action="start"/>
+      <echo>Retrieving from AolQA...</echo>
+      <delete dir="${sourceQA}" />
+      <mkdir dir="${sourceQA}" />
+      <sf:retrieve username="${aolqa.username}"
+                   password="${aolqa.password}"
+                   serverurl="${aolqa.serverurl}"
+                   retrieveTarget="${sourceQA}"
+                   unpackaged="${entireProject}"
+                   pollWaitMillis="10000"
+                   maxPoll="5000" />
+       <record name="${logFile}" action="stop"/>
+    </target>
+
+    <target name="deployProjectToQA" depends="checkForTodaysDeletions" unless="todaysDeletionsExist">
+      <mkdir dir="log" />
+      <record name="${logFile}" action="start"/>
+      <echo>Deploying to AolQA...</echo>
+      <echo>making sure destructive changes files are first deleted...</echo>
+      <delete file="${projectSource}/destructiveChangesPre.xml" />
+      <delete file="${projectSource}/destructiveChangesPost.xml" />
+
+      <sf:deploy username="${aolqa.username}"
+                 password="${aolqa.password}"
+                 serverurl="${aolqa.serverurl}"
+                 deployRoot="${projectSource}"
+                 pollWaitMillis="10000"
+                 testLevel="RunLocalTests"
+                 maxPoll="5000"
+                 checkOnly="false" />
+       <record name="${logFile}" action="stop"/>
+    </target>
+
+    <target name="deployAndDestroyQA" depends="checkForTodaysDeletions" if="todaysDeletionsExist">
+      <mkdir dir="log" />
+      <record name="${logFile}" action="start"/>
+      <echo>Copying destructiveChanges files to the project root ...</echo>
+      <copy file="${todaysDeletions}/destructiveChangesPre.xml" todir="${projectSource}" overwrite="true" failonerror="false"/>
+      <copy file="${todaysDeletions}/destructiveChangesPost.xml" todir="${projectSource}" overwrite="true" failonerror="false"/>
+      <echo>Deploying Updates and Destructive Changes to QA...</echo>
+      <sf:deploy username="${aolqa.username}"
+                 password="${aolqa.password}"
+                 serverurl="${aolqa.serverurl}"
+                 deployRoot="${projectSource}"
+                 pollWaitMillis="10000"
+                 testLevel="RunLocalTests"
+                 maxPoll="5000"
+                 checkOnly="false"
+                 ignoreWarnings="true"/>
+      <echo>Deleting temporary destructiveChanges files from the project root ...</echo>
+      <delete file="${projectSource}/destructiveChangesPre.xml" />
+      <delete file="${projectSource}/destructiveChangesPost.xml" />
+      <record name="${logFile}" action="stop"/>
+    </target>
+
+    <target name="retrieveFull">
+      <mkdir dir="log" />
+      <record name="${logFile}" action="start"/>
+      <echo>Retrieving from AolFull...</echo>
+      <delete dir="${sourceFull}" />
+      <mkdir dir="${sourceFull}" />
+      <sf:retrieve username="${aolfull.username}"
+                   password="${aolfull.password}"
+                   serverurl="${aolfull.serverurl}"
+                   retrieveTarget="${sourceFull}"
+                   unpackaged="${entireProject}"
+                   pollWaitMillis="10000"
+                   maxPoll="5000" />
+       <record name="${logFile}" action="stop"/>
+    </target>
+
+    <target name="deployProjectToFull" depends="checkForTodaysDeletions" unless="todaysDeletionsExist">
+      <mkdir dir="log" />
+      <record name="${logFile}" action="start"/>
+      <echo>Deploying to AolFull...</echo>
+      <sf:deploy username="${aolfull.username}"
+                 password="${aolfull.password}"
+                 serverurl="${aolfull.serverurl}"
+                 deployRoot="${projectSource}"
+                 pollWaitMillis="10000"
+                 maxPoll="5000"
+                 testLevel="RunLocalTests"
+                 checkOnly="false" />
+       <record name="${logFile}" action="stop"/>
+    </target>
+
+
+    <target name="deployAndDestroyFull" depends="checkForTodaysDeletions" if="todaysDeletionsExist">
+      <mkdir dir="log" />
+      <record name="${logFile}" action="start"/>
+      <echo>Copying destructiveChanges files to the project root ...</echo>
+      <copy file="${todaysDeletions}/destructiveChangesPre.xml" todir="${projectSource}" overwrite="true" failonerror="false"/>
+      <copy file="${todaysDeletions}/destructiveChangesPost.xml" todir="${projectSource}" overwrite="true" failonerror="false"/>
+      <echo>Deploying Updates and Destructive Changes to Full...</echo>
+      <sf:deploy username="${aolfull.username}"
+                 password="${aolfull.password}"
+                 serverurl="${aolfull.serverurl}"
+                 deployRoot="${projectSource}"
+                 pollWaitMillis="10000"
+                 testLevel="RunLocalTests"
+                 maxPoll="5000"
+                 checkOnly="false"
+                 ignoreWarnings="true"/>
+      <echo>Deleting temporary destructiveChanges files from the project root ...</echo>
+      <delete file="${projectSource}/destructiveChangesPre.xml" />
+      <delete file="${projectSource}/destructiveChangesPost.xml" />
+      <record name="${logFile}" action="stop"/>
+    </target>
+
+    <target name="retrieveTraining">
+      <mkdir dir="log" />
+      <record name="${logFile}" action="start"/>
+      <echo>Retrieving from AolTraining...</echo>
+      <delete dir="${sourceTraining}" />
+      <mkdir dir="${sourceTraining}" />
+      <sf:retrieve username="${aoltraining.username}"
+                   password="${aoltraining.password}"
+                   serverurl="${aoltraining.serverurl}"
+                   retrieveTarget="${sourceTraining}"
+                   unpackaged="${entireProject}"
+                   pollWaitMillis="10000"
+                   maxPoll="5000" />
+       <record name="${logFile}" action="stop"/>
+    </target>
+
+    <target name="deployProjectToTraining" depends="checkForTodaysDeletions" unless="todaysDeletionsExist">
+      <mkdir dir="log" />
+      <record name="${logFile}" action="start"/>
+      <echo>Deploying to AolTraining...</echo>
+      <sf:deploy username="${aoltraining.username}"
+                 password="${aoltraining.password}"
+                 serverurl="${aoltraining.serverurl}"
+                 deployRoot="${projectSource}"
+                 pollWaitMillis="10000"
+                 maxPoll="5000"
+                 checkOnly="false" />
+                 <!-- testLevel="RunLocalTests" -->
+       <record name="${logFile}" action="stop"/>
+    </target>
+
+    <target name="deployAndDestroyTraining" depends="checkForTodaysDeletions" if="todaysDeletionsExist">
+      <mkdir dir="log" />
+      <record name="${logFile}" action="start"/>
+      <echo>Copying destructiveChanges files to the project root ...</echo>
+      <copy file="${todaysDeletions}/destructiveChangesPre.xml" todir="${projectSource}" overwrite="true" failonerror="false"/>
+      <copy file="${todaysDeletions}/destructiveChangesPost.xml" todir="${projectSource}" overwrite="true" failonerror="false"/>
+      <echo>Deploying Updates and Destructive Changes to Training...</echo>
+      <sf:deploy username="${aoltraining.username}"
+                 password="${aoltraining.password}"
+                 serverurl="${aoltraining.serverurl}"
+                 deployRoot="${projectSource}"
+                 pollWaitMillis="10000"
+                 maxPoll="5000"
+                 checkOnly="false"
+                 ignoreWarnings="true"/>
+                 <!-- testLevel="RunLocalTests" -->
+      <echo>Deleting temporary destructiveChanges files from the project root ...</echo>
+      <delete file="${projectSource}/destructiveChangesPre.xml" />
+      <delete file="${projectSource}/destructiveChangesPost.xml" />
+      <record name="${logFile}" action="stop"/>
+    </target>
+
+    <target name="deployProjectToProd" depends="checkForTodaysDeletions" unless="todaysDeletionsExist">
+      <mkdir dir="log" />
+      <record name="${logFile}" action="start"/>
+      <echo>Archiving AolProd...</echo>
+      <mkdir dir="${ProdBackup}" />
+      <sf:retrieve username="${aolprod.username}"
+                   password="${aolprod.password}"
+                   serverurl="${aolprod.serverurl}"
+                   retrieveTarget="${ProdBackup}"
+                   unpackaged="${entireProject}"
+                   pollWaitMillis="10000"
+                   maxPoll="5000" />
+
+      <echo>Deploying to AolProd...</echo>
+      <sf:deploy username="${aolprod.username}"
+                 password="${aolprod.password}"
+                 serverurl="${aolprod.serverurl}"
+                 deployRoot="${projectSource}"
+                 pollWaitMillis="10000"
+                 maxPoll="5000"
+                 checkOnly="false" />
+       <record name="${logFile}" action="stop"/>
+    </target>
+
+    <target name="retrieveProd">
+      <mkdir dir="log" />
+      <record name="${logFile}" action="start"/>
+      <echo>Archiving AolProd...</echo>
+      <mkdir dir="${ProdBackup}" />
+      <sf:retrieve username="${aolprod.username}"
+                   password="${aolprod.password}"
+                   serverurl="${aolprod.serverurl}"
+                   retrieveTarget="${ProdBackup}"
+                   unpackaged="${entireProject}"
+                   pollWaitMillis="10000"
+                   maxPoll="5000" />
+      <record name="${logFile}" action="stop"/>
+    </target>
+
+    <target name="deployAndDestroyProd" depends="checkForTodaysDeletions" if="todaysDeletionsExist">
+      <mkdir dir="log" />
+      <record name="${logFile}" action="start"/>
+      <echo>Copying destructiveChanges files to the project root ...</echo>
+      <copy file="${todaysDeletions}/destructiveChangesPre.xml" todir="${projectSource}" overwrite="true" failonerror="false"/>
+      <copy file="${todaysDeletions}/destructiveChangesPost.xml" todir="${projectSource}" overwrite="true" failonerror="false"/>
+      <echo>Archiving items to be deleted before deploying to Prod...</echo>
+      <mkdir dir="${ProdBackup}" />
+      <sf:retrieve username="${aolprod.username}"
+                   password="${aolprod.password}"
+                   serverurl="${aolprod.serverurl}"
+                   retrieveTarget="${ProdBackup}"
+                   unpackaged="${entireProject}"
+                   pollWaitMillis="10000"
+                   maxPoll="5000"/>
+      <echo>Deploying Updates and Destructive Changes to Prod...</echo>
+      <sf:deploy username="${aolprod.username}"
+                 password="${aolprod.password}"
+                 serverurl="${aolprod.serverurl}"
+                 deployRoot="${projectSource}"
+                 pollWaitMillis="10000"
+                 testLevel="RunLocalTests"
+                 maxPoll="5000"
+                 checkOnly="false"
+                 ignoreWarnings="true"/>
+      <echo>Deleting temporary destructiveChanges files from the project root ...</echo>
+      <delete file="${projectSource}/destructiveChangesPre.xml" />
+      <delete file="${projectSource}/destructiveChangesPost.xml" />
+      <record name="${logFile}" action="stop"/>
+    </target>
+</project>
