@@ -5,7 +5,7 @@
             <c:AccountMap />
         </div>
 
-        <div>
+        <div class="test">
             <c:AccountList />
         </div>
     </div>
